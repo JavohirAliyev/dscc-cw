@@ -10,8 +10,5 @@ exclude =
     staticfiles,
     media,
     node_modules
-ignore = 
-    E501,  # Line too long
-    W503,  # Line break before binary operator
-    E203,  # Whitespace before ':'
+ignore = E501,W503,E203
 max-complexity = 10
