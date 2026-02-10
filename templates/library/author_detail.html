@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ author.name }} - Library Management System{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 150px; height: 150px; font-size: 4rem;">
+                        <i class="bi bi-person"></i>
+                    </div>
+                    
+                    <h3>{{ author.name }}</h3>
+                    
+                    {% if author.nationality %}
+                    <p class="text-muted">
+                        <i class="bi bi-globe"></i> {{ author.nationality }}
+                    </p>
+                    {% endif %}
+
+                    {% if author.birth_date %}
+                    <p class="text-muted">
+                        <i class="bi bi-calendar"></i> Born: {{ author.birth_date }}
+                    </p>
+                    {% endif %}
+
+                    <div class="mt-3">
+                        <span class="badge bg-primary fs-6">
+                            {{ books.count }} Book{% if books.count != 1 %}s{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4>Biography</h4>
+                    <p>{{ author.bio|default:"No biography available." }}</p>
+                </div>
+            </div>
+
+            <h4 class="mb-3">Books by {{ author.name }}</h4>
+            <div class="row g-4">
+                {% for book in books %}
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ book.title }}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar"></i> {{ book.publication_date|date:"Y" }}
+                                </small>
+                            </p>
+                            <p class="card-text">
+                                {% if book.is_available %}
+                                <span class="badge bg-success">Available</span>
+                                {% else %}
+                                <span class="badge bg-danger">Not Available</span>
+                                {% endif %}
+                            </p>
+                            <a href="{% url 'book_detail' book.pk %}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-eye"></i> View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No books available for this author.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-4">
+                <a href="{% url 'author_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Authors
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

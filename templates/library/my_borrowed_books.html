@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}My Borrowed Books - Library Management System{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4"><i class="bi bi-bookmark-check"></i> My Borrowed Books</h2>
+
+    {% if borrow_records %}
+    <div class="row g-4">
+        {% for record in borrow_records %}
+        <div class="col-md-6">
+            <div class="card {% if record.status == 'overdue' %}border-danger{% elif record.status == 'returned' %}border-success{% endif %}">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            {% if record.book.cover_image %}
+                            <img src="{{ record.book.cover_image.url }}" class="img-fluid rounded" alt="{{ record.book.title }}">
+                            {% else %}
+                            <div class="bg-secondary text-white d-flex align-items-center justify-content-center rounded" style="height: 150px;">
+                                <i class="bi bi-book" style="font-size: 3rem;"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="card-title">{{ record.book.title }}</h5>
+                            <p class="card-text text-muted">
+                                <i class="bi bi-person"></i> {{ record.book.author.name }}
+                            </p>
+                            
+                            <p class="card-text">
+                                <strong>Borrowed:</strong> {{ record.borrow_date|date:"M d, Y" }}<br>
+                                <strong>Due:</strong> {{ record.due_date|date:"M d, Y" }}<br>
+                                
+                                {% if record.return_date %}
+                                <strong>Returned:</strong> {{ record.return_date|date:"M d, Y" }}<br>
+                                {% endif %}
+                                
+                                <strong>Status:</strong>
+                                {% if record.status == 'borrowed' %}
+                                    {% if record.is_overdue %}
+                                    <span class="badge bg-danger">Overdue</span>
+                                    {% else %}
+                                    <span class="badge bg-primary">Borrowed</span>
+                                    {% endif %}
+                                {% elif record.status == 'returned' %}
+                                <span class="badge bg-success">Returned</span>
+                                {% endif %}
+                            </p>
+
+                            {% if record.status == 'borrowed' %}
+                            <form method="post" action="{% url 'return_book' record.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="bi bi-check-circle"></i> Return Book
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> You haven't borrowed any books yet.
+        <a href="{% url 'book_list' %}" class="alert-link">Browse books</a> to get started!
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

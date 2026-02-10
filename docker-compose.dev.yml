@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Development
+  db:
+    image: postgres:15-alpine
+    container_name: library_postgres_dev
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=library_db
+      - POSTGRES_USER=library_user
+      - POSTGRES_PASSWORD=devpassword
+    ports:
+      - "5432:5432"
+    networks:
+      - library_network_dev
+
+  # Django Application for Development
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: library_django_dev
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - static_volume_dev:/app/staticfiles
+      - media_volume_dev:/app/media
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - DB_NAME=library_db
+      - DB_USER=library_user
+      - DB_PASSWORD=devpassword
+      - DB_HOST=db
+      - DB_PORT=5432
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    depends_on:
+      - db
+    networks:
+      - library_network_dev
+
+volumes:
+  postgres_data_dev:
+  static_volume_dev:
+  media_volume_dev:
+
+networks:
+  library_network_dev:
+    driver: bridge

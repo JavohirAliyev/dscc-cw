@@ -1,0 +1,17 @@
+[flake8]
+max-line-length = 127
+exclude = 
+    .git,
+    __pycache__,
+    */migrations/*,
+    venv,
+    env,
+    .venv,
+    staticfiles,
+    media,
+    node_modules
+ignore = 
+    E501,  # Line too long
+    W503,  # Line break before binary operator
+    E203,  # Whitespace before ':'
+max-complexity = 10
