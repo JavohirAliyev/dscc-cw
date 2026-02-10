@@ -1,6 +1,7 @@
 name: CI/CD Pipeline - Library Management System
 
-# Complete pipeline: Code Quality → Tests → Build → Deploy to Azure
+# Complete pipeline: Code Quality → Tests → Build → Push to Docker Hub
+# Azure Container Apps automatically pulls latest image from Docker Hub
 on:
   push:
     branches: [ main ]
@@ -102,44 +103,43 @@ jobs:
         pytest --verbose --tb=short
         echo "✅ All tests passed!"
   
-  # Job 3: Build and Deploy to Azure
-  build-and-deploy:
-    name: Build & Deploy to Azure
+  # Job 3: Build and Push Docker Image
+  build-and-push:
+    name: Build & Push Docker Image
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    permissions: 
-      id-token: write  # Required for OIDC authentication
-      contents: read
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
       
-    - name: Azure Login (OIDC)
-      uses: azure/login@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
       with:
-        client-id: ${{ secrets.LIBRARYMANAGEMENT_AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.LIBRARYMANAGEMENT_AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.LIBRARYMANAGEMENT_AZURE_SUBSCRIPTION_ID }}
+        username: ${{ secrets.LIBRARYMANAGEMENT_REGISTRY_USERNAME }}
+        password: ${{ secrets.LIBRARYMANAGEMENT_REGISTRY_PASSWORD }}
     
-    - name: Build and Deploy to Azure Container Apps
-      uses: azure/container-apps-deploy-action@v2
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
       with:
-        appSourcePath: ${{ github.workspace }}
-        registryUrl: docker.io
-        registryUsername: ${{ secrets.LIBRARYMANAGEMENT_REGISTRY_USERNAME }}
-        registryPassword: ${{ secrets.LIBRARYMANAGEMENT_REGISTRY_PASSWORD }}
-        containerAppName: library-management
-        resourceGroup: dscc-rg
-        imageToBuild: javohiraliyev/library-management:${{ github.sha }}
+        context: .
+        push: true
+        tags: |
+          javohiraliyev/library-management:latest
+          javohiraliyev/library-management:${{ github.sha }}
+        cache-from: type=registry,ref=javohiraliyev/library-management:buildcache
+        cache-to: type=registry,ref=javohiraliyev/library-management:buildcache,mode=max
         
-    - name: Deployment Success
+    - name: Build Success
       run: |
-        echo "🎉 Deployment completed successfully!"
+        echo "🎉 Build and push completed successfully!"
         echo "✅ Code quality checks passed"
         echo "✅ All tests passed"
-        echo "✅ Docker image built and pushed"
-        echo "✅ Deployed to Azure Container Apps"
+        echo "✅ Docker image built and pushed to Docker Hub"
         echo ""
-        echo "🌐 Your application should be live at your Azure Container App URL"
+        echo "🐳 Image: javohiraliyev/library-management:latest"
+        echo "📦 Azure Container Apps will automatically pull the new image"

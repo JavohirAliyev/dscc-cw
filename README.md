@@ -278,14 +278,18 @@ docker-compose exec web python manage.py createsuperuser
 
 ## 🔄 CI/CD Pipeline
 
-The project includes a complete GitHub Actions workflow for automated testing and deployment to Azure Container Apps.
+The project includes a complete GitHub Actions workflow for automated testing and building Docker images.
 
 ### Pipeline Stages
 
-1. **Code Quality** - Flake8 linting
-2. **Testing** - Pytest with PostgreSQL
-3. **Build & Push** - Docker image to Docker Hub
-4. **Deploy** - Automatic deployment to Azure Container Apps
+Every push to `main` triggers:
+
+1. **Code Quality Checks** - Flake8 linting for syntax and style
+2. **Automated Tests** - Pytest with PostgreSQL test database
+3. **Build Docker Image** - Containerize application
+4. **Push to Docker Hub** - Publish with `latest` tag
+
+**Azure Container Apps automatically pulls the latest image from Docker Hub.**
 
 ### Required GitHub Secrets
 
@@ -293,31 +297,28 @@ Configure these in **Settings → Secrets and variables → Actions**:
 
 | Secret Name | Description | How to Get It |
 |-------------|-------------|---------------|
-| `DOCKERHUB_USERNAME` | Docker Hub username | Your Docker Hub account |
-| `DOCKERHUB_TOKEN` | Docker Hub access token | Docker Hub → Security → New Access Token |
-| `AZURE_CREDENTIALS` | Azure service principal | `az ad sp create-for-rbac --sdk-auth` |
-| `AZURE_RESOURCE_GROUP` | Resource group name | e.g., `library-rg` |
-| `AZURE_CONTAINER_APP_NAME` | Container app name | e.g., `library-management-app` |
+| `LIBRARYMANAGEMENT_REGISTRY_USERNAME` | Docker Hub username | Your Docker Hub account |
+| `LIBRARYMANAGEMENT_REGISTRY_PASSWORD` | Docker Hub password/token | Docker Hub → Security → New Access Token |
 
-See [AZURE_DEPLOYMENT_GUIDE.md](AZURE_DEPLOYMENT_GUIDE.md) for detailed setup instructions.
+✅ **These secrets are already configured** by Azure Portal auto-deploy setup.
 
-### Triggering Deployment
-
-Deployment is automatically triggered on push to the `main` branch:
+### How It Works
 
 ```bash
+# Push your code
 git add .
-git commit -m "Update application"
+git commit -m "Add new feature"
 git push origin main
+
+# Pipeline runs automatically:
+# 1. ✅ Code quality checks
+# 2. ✅ Tests with PostgreSQL
+# 3. ✅ Build Docker image
+# 4. ✅ Push to Docker Hub (latest tag)
+# 5. 🔄 Azure automatically pulls and deploys new image
 ```
 
-The workflow will:
-1. ✅ Run code quality checks
-2. ✅ Execute all tests
-3. ✅ Build Docker image
-4. ✅ Push to Docker Hub
-5. ✅ Deploy to Azure Container Apps
-6. ✅ Update with new container revision
+**Total Time:** ~3-5 minutes from push to Docker Hub. Azure pulls the image automatically.
 
 ## 🧪 Running Tests
 
