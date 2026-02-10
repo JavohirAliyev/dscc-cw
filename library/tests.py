@@ -136,8 +136,8 @@ class TestAuthentication(TestCase):
             'first_name': 'New',
             'last_name': 'User',
             'email': 'newuser@example.com',
-            'password1': 'testpass123!',
-            'password2': 'testpass123!',
+            'password1': 'ComplexPass123!@#',
+            'password2': 'ComplexPass123!@#',
         }, follow=True)
         self.assertEqual(response.status_code, 200)  # Should complete after following redirects
         self.assertTrue(User.objects.filter(username='newuser').exists())
