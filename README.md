@@ -1,16 +1,8 @@
 # 📚 Library Management System
 
-A modern, fully containerized Django web application for managing library operations with complete CI/CD pipeline implementation.
-
-![Python](https://img.shields.io/badge/Python-3.11-blue)
-![Django](https://img.shields.io/badge/Django-4.2-green)
-![Docker](https://img.shields.io/badge/Docker-Enabled-blue)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
-![License](https://img.shields.io/badge/License-MIT-yellow)
-
 ## 🎯 Project Overview
 
-This Library Management System is a comprehensive web application built as part of a DevOps coursework project. It demonstrates modern software development practices including containerization, cloud deployment, and automated CI/CD pipelines.
+This Library Management System is a comprehensive web application built as part of a DSCC coursework project. It demonstrates modern software development practices including containerization, cloud deployment, and automated CI/CD pipelines.
 
 ### Key Features
 
