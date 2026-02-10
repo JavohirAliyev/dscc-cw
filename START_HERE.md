@@ -143,8 +143,8 @@ docker login
 
 4. **Build and push**:
 ```bash
-docker build -t YOUR_USERNAME/library-management:latest .
-docker push YOUR_USERNAME/library-management:latest
+docker build -t javohiraliyev/library-management:latest .
+docker push javohiraliyev/library-management:latest
 ```
 
 ### Step 4: Deploy to Server (1-2 hours)
