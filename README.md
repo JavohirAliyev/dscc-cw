@@ -112,7 +112,7 @@ This Library Management System is a comprehensive web application built as part 
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/library-management.git
+git clone https://github.com/JavohirAliyev/library-management.git
 cd library-management
 ```
 
@@ -132,7 +132,7 @@ pip install -r requirements.txt
 # Create database and user
 psql -U postgres
 CREATE DATABASE library_db;
-CREATE USER library_user WITH PASSWORD 'your_password';
+CREATE USER library_user WITH PASSWORD;
 GRANT ALL PRIVILEGES ON DATABASE library_db TO library_user;
 \q
 ```
@@ -140,7 +140,6 @@ GRANT ALL PRIVILEGES ON DATABASE library_db TO library_user;
 5. **Configure environment variables**
 ```bash
 cp .env.example .env
-# Edit .env with your settings
 ```
 
 6. **Run migrations**
@@ -169,14 +168,13 @@ Access the application at `http://localhost:8000`
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/library-management.git
+git clone https://github.com/JavohirAliyev/library-management.git
 cd library-management
 ```
 
 2. **Create environment file**
 ```bash
 cp .env.example .env
-# Edit .env with your settings
 ```
 
 3. **Build and start containers**
@@ -209,13 +207,6 @@ Access the application:
 
 ## 🌐 Deployment Instructions
 
-### Prerequisites for Deployment
-
-- Ubuntu 20.04+ server (Eskiz Cloud or any VPS)
-- Domain name pointed to server IP
-- SSH access to server
-- Docker and Docker Compose installed on server
-
 ### Server Setup
 
 1. **Update system and install Docker**
@@ -238,30 +229,23 @@ sudo ufw enable
 3. **Clone repository on server**
 ```bash
 cd /home/$USER
-git clone https://github.com/yourusername/library-management.git
+git clone https://github.com/JavohirAliyev/library-management.git
 cd library-management
 ```
 
 4. **Configure environment variables**
 ```bash
 nano .env
-# Set production values:
-# - Strong SECRET_KEY
-# - DEBUG=False
-# - Production ALLOWED_HOSTS
-# - Secure database credentials
 ```
 
 5. **Setup SSL certificate**
 ```bash
 chmod +x scripts/init_ssl.sh
-./scripts/init_ssl.sh yourdomain.uz
+./scripts/init_ssl.sh (Azure domain name)
 ```
 
 6. **Update Nginx configuration**
 ```bash
-# Edit nginx/conf.d/default.conf
-# Replace 'localhost' with your domain name
 nano nginx/conf.d/default.conf
 ```
 
@@ -276,8 +260,6 @@ chmod +x scripts/deploy.sh
 docker-compose exec web python manage.py createsuperuser
 ```
 
-Your application should now be accessible at `https://yourdomain.uz`
-
 ## 🔄 CI/CD Pipeline
 
 The project includes a complete GitHub Actions workflow for automated testing and deployment.
@@ -288,18 +270,6 @@ The project includes a complete GitHub Actions workflow for automated testing an
 2. **Testing** - Pytest with PostgreSQL
 3. **Build & Push** - Docker image to Docker Hub
 4. **Deploy** - Automatic deployment to production server
-
-### Required GitHub Secrets
-
-Configure these secrets in your GitHub repository settings (Settings → Secrets and variables → Actions):
-
-| Secret Name | Description |
-|------------|-------------|
-| `DOCKERHUB_USERNAME` | Your Docker Hub username |
-| `DOCKERHUB_TOKEN` | Docker Hub access token |
-| `SSH_PRIVATE_KEY` | Private SSH key for server access |
-| `SSH_HOST` | Production server IP/domain |
-| `SSH_USERNAME` | SSH username for server |
 
 ### Triggering Deployment
 
@@ -320,40 +290,16 @@ The workflow will:
 6. ✅ Run migrations
 7. ✅ Restart services with zero downtime
 
-## 📝 Environment Variables Documentation
-
-Create a `.env` file in the project root with the following variables:
-
-```env
-# Django Settings
-SECRET_KEY=your-secret-key-here
-DEBUG=False
-ALLOWED_HOSTS=localhost,127.0.0.1,yourdomain.uz
-
-# Database Settings
-DB_NAME=library_db
-DB_USER=library_user
-DB_PASSWORD=strong_password
-DB_HOST=db
-DB_PORT=5432
-```
-
-**Important:** Never commit `.env` file to version control. Use `.env.example` as a template.
-
 ## 🧪 Running Tests
 
 ### Local Testing
 ```bash
-# Run all tests
 pytest
 
-# Run with coverage
 pytest --cov=library
 
-# Run specific test file
 pytest library/tests.py
 
-# Verbose output
 pytest -v
 ```
 
@@ -391,64 +337,7 @@ docker-compose exec web pytest --cov=library
 - SQL injection prevention (Django ORM)
 - Password hashing (Django built-in)
 
-## 📊 Project Statistics
-
-- **Total Lines of Code**: ~2500+
-- **Models**: 5 (Author, Category, Book, BorrowRecord, UserProfile)
-- **Views**: 15+ functional views
-- **Templates**: 10+ HTML templates
-- **Tests**: 15+ test cases
-- **API Endpoints**: 14+ URL patterns
-
-## 🤝 Contributing
-
-This is an academic project, but suggestions are welcome!
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 👨‍💻 Author
-
-**Your Name**
-- Student ID: Your ID
-- Email: your.email@example.com
-- GitHub: [@yourusername](https://github.com/yourusername)
-
-## 🙏 Acknowledgments
-
-- Django Documentation
-- Docker Documentation
-- Bootstrap Framework
-- PostgreSQL Community
-- GitHub Actions Documentation
-
-## 📞 Support
-
-For issues and questions:
-- Create an issue on GitHub
-- Email: your.email@example.com
-
 ## 🔗 Live Demo
 
-- **Application**: https://yourdomain.uz
-- **GitHub**: https://github.com/yourusername/library-management
-- **Docker Hub**: https://hub.docker.com/r/yourusername/library-management
-
-## 📚 Additional Resources
-
-- [Django Documentation](https://docs.djangoproject.com/)
-- [Docker Documentation](https://docs.docker.com/)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [Nginx Documentation](https://nginx.org/en/docs/)
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-
----
-
-**Built with ❤️ for DevOps Coursework 2026**
+- **Application**: https://
+- **Docker Hub**: https://hub.docker.com/r/javohiraliyev/library-management

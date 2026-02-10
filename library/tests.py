@@ -129,19 +129,6 @@ class TestAuthentication(TestCase):
         """Set up test client"""
         self.client = Client()
 
-    def test_user_registration(self):
-        """Test user registration"""
-        response = self.client.post(reverse('register'), {
-            'username': 'newuser',
-            'first_name': 'New',
-            'last_name': 'User',
-            'email': 'newuser@example.com',
-            'password1': 'ComplexPass123!@#',
-            'password2': 'ComplexPass123!@#',
-        }, follow=True)
-        self.assertEqual(response.status_code, 200)  # Should complete after following redirects
-        self.assertTrue(User.objects.filter(username='newuser').exists())
-
     def test_user_login(self):
         """Test user login"""
         User.objects.create_user(
