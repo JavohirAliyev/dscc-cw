@@ -1,0 +1,145 @@
+name: CI/CD Pipeline - Library Management System
+
+# Complete pipeline: Code Quality → Tests → Build → Deploy to Azure
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  # Job 1: Code Quality Checks
+  code-quality:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8
+        
+    - name: Run Flake8 linting
+      run: |
+        echo "🔍 Running code quality checks..."
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        echo "✅ Code quality checks passed!"
+  
+  # Job 2: Run Tests
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: library_user
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: library_test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run tests
+      env:
+        SECRET_KEY: test-secret-key-for-ci
+        DEBUG: False
+        DB_NAME: library_test_db
+        DB_USER: library_user
+        DB_PASSWORD: testpassword
+        DB_HOST: localhost
+        DB_PORT: 5432
+        ALLOWED_HOSTS: localhost,127.0.0.1
+      run: |
+        echo "🧪 Running tests..."
+        python manage.py migrate
+        pytest --verbose --tb=short
+        echo "✅ All tests passed!"
+  
+  # Job 3: Build and Deploy to Azure
+  build-and-deploy:
+    name: Build & Deploy to Azure
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions: 
+      id-token: write  # Required for OIDC authentication
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Azure Login (OIDC)
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.LIBRARYMANAGEMENT_AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.LIBRARYMANAGEMENT_AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.LIBRARYMANAGEMENT_AZURE_SUBSCRIPTION_ID }}
+    
+    - name: Build and Deploy to Azure Container Apps
+      uses: azure/container-apps-deploy-action@v2
+      with:
+        appSourcePath: ${{ github.workspace }}
+        registryUrl: docker.io
+        registryUsername: ${{ secrets.LIBRARYMANAGEMENT_REGISTRY_USERNAME }}
+        registryPassword: ${{ secrets.LIBRARYMANAGEMENT_REGISTRY_PASSWORD }}
+        containerAppName: library-management
+        resourceGroup: dscc-rg
+        imageToBuild: javohiraliyev/library-management:${{ github.sha }}
+        
+    - name: Deployment Success
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo "✅ Code quality checks passed"
+        echo "✅ All tests passed"
+        echo "✅ Docker image built and pushed"
+        echo "✅ Deployed to Azure Container Apps"
+        echo ""
+        echo "🌐 Your application should be live at your Azure Container App URL"
