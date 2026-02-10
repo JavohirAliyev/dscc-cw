@@ -1,4 +1,12 @@
-name: CI/CD Pipeline - Library Management System
+name: CI/CD Pipeline - Library Management System (Azure)
+
+# This pipeline deploys to Azure Container Apps
+# Required secrets:
+# - DOCKERHUB_USERNAME, DOCKERHUB_TOKEN (for Docker Hub)
+# - AZURE_CREDENTIALS (Azure service principal JSON)
+# - AZURE_RESOURCE_GROUP (e.g., library-rg)
+# - AZURE_CONTAINER_APP_NAME (e.g., library-management-app)
+# - AZURE_CONTAINER_ENV_NAME (e.g., library-environment)
 
 on:
   push:
@@ -142,9 +150,9 @@ jobs:
     - name: Image digest
       run: echo "Image pushed with digest ${{ steps.build-and-push.outputs.digest }}"
   
-  # Job 4: Deploy to Server
-  deploy:
-    name: Deploy to Production Server
+  # Job 4: Deploy to Azure Container Apps
+  deploy-azure:
+    name: Deploy to Azure Container Apps
     runs-on: ubuntu-latest
     needs: build-and-push
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -153,52 +161,39 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
       
-    - name: Setup SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
         
-    - name: Deploy to server
-      env:
-        SSH_HOST: ${{ secrets.SSH_HOST }}
-        SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-      run: |
-        ssh ${SSH_USERNAME}@${SSH_HOST} << 'ENDSSH'
-          cd /home/${USER}/library-management
+    - name: Deploy to Azure Container Apps
+      uses: azure/CLI@v1
+      with:
+        inlineScript: |
+          echo "🚀 Deploying to Azure Container Apps..."
           
-          # Pull latest code
-          git pull origin main
+          # Update container app with new image
+          az containerapp update \
+            --name ${{ secrets.AZURE_CONTAINER_APP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --image ${{ env.DOCKER_IMAGE }}:latest \
+            --revision-suffix $(date +%s)
           
-          # Pull latest Docker images
-          docker-compose pull
+          echo "✅ Deployment completed!"
           
-          # Stop old containers
-          docker-compose down
+    - name: Get Application URL
+      uses: azure/CLI@v1
+      with:
+        inlineScript: |
+          echo "🌐 Getting application URL..."
+          APP_URL=$(az containerapp show \
+            --name ${{ secrets.AZURE_CONTAINER_APP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)
+          echo "✅ Application is accessible at: https://$APP_URL"
           
-          # Start new containers
-          docker-compose up -d
-          
-          # Wait for services to be ready
-          sleep 15
-          
-          # Run migrations
-          docker-compose exec -T web python manage.py migrate --noinput
-          
-          # Collect static files
-          docker-compose exec -T web python manage.py collectstatic --noinput --clear
-          
-          # Check running containers
-          docker-compose ps
-          
-          # Cleanup old images
-          docker image prune -af
-          
-          echo "✅ Deployment completed successfully!"
-        ENDSSH
-        
     - name: Deployment notification
       run: |
-        echo "🎉 Deployment to production server completed!"
-        echo "🌐 Application should be accessible at https://${{ secrets.SSH_HOST }}"
+        echo "🎉 Deployment to Azure Container Apps completed successfully!"
+        echo "📊 Check Azure Portal for detailed status"
