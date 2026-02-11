@@ -84,19 +84,32 @@ else:
         db_engine = 'django.db.backends.postgresql'
         pool_options = {}
 
+    # Read DB host early so we can adjust connection options for cloud providers
+    db_host = config('DB_HOST', default='localhost')
+
+    # Base options applied for most backends
+    base_options = {
+        'connect_timeout': 10,
+    }
+
+    # Some managed providers (eg. Neon) don't accept arbitrary startup parameters
+    # and require SSL. Detect Neon by hostname and avoid sending `options`.
+    if 'neon.tech' in db_host:
+        base_options['sslmode'] = 'require'
+    else:
+        # Safe to pass server-side options for traditional Postgres servers
+        base_options['options'] = '-c statement_timeout=30000'  # 30s
+
     DATABASES = {
         'default': {
             'ENGINE': db_engine,
             'NAME': config('DB_NAME', default='library_db'),
             'USER': config('DB_USER', default='library_user'),
             'PASSWORD': config('DB_PASSWORD', default='password'),
-            'HOST': config('DB_HOST', default='localhost'),
+            'HOST': db_host,
             'PORT': config('DB_PORT', default='5432'),
             'CONN_MAX_AGE': 600,  # Keep connections alive for 10 minutes
-            'OPTIONS': {
-                'connect_timeout': 10,
-                'options': '-c statement_timeout=30000',  # 30 second query timeout
-            },
+            'OPTIONS': base_options,
             **pool_options
         }
     }
