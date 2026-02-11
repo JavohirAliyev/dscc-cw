@@ -8,11 +8,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from django.utils import timezone
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.views.decorators.cache import cache_page
 from datetime import timedelta
 from .models import Book, Author, Category, BorrowRecord, UserProfile
 from .forms import UserRegisterForm, BookForm, AuthorForm, CategoryForm, BorrowRecordForm, UserProfileForm
 
 
+@cache_page(60 * 5)  # Cache for 5 minutes
 def home(request):
     """Home page view - displays recent books and statistics"""
     recent_books = Book.objects.select_related('author').prefetch_related('categories')[:6]
@@ -31,6 +34,8 @@ def home(request):
 
 def book_list(request):
     """Book list view with search and filter functionality"""
+    from django.db.models import Count
+    
     books = Book.objects.select_related('author').prefetch_related('categories')
     query = request.GET.get('q')
     category = request.GET.get('category')
@@ -45,10 +50,22 @@ def book_list(request):
     if category:
         books = books.filter(categories__id=category)
     
-    categories = Category.objects.all()
+    # Pagination
+    paginator = Paginator(books, 20)  # Show 20 books per page
+    page = request.GET.get('page')
+    
+    try:
+        books_page = paginator.page(page)
+    except PageNotAnInteger:
+        books_page = paginator.page(1)
+    except EmptyPage:
+        books_page = paginator.page(paginator.num_pages)
+    
+    # Optimize category query with book count
+    categories = Category.objects.annotate(book_count=Count('books'))
     
     context = {
-        'books': books,
+        'books': books_page,
         'categories': categories,
         'query': query,
         'selected_category': category,
@@ -58,7 +75,10 @@ def book_list(request):
 
 def book_detail(request, pk):
     """Book detail view"""
-    book = get_object_or_404(Book, pk=pk)
+    book = get_object_or_404(
+        Book.objects.select_related('author').prefetch_related('categories'),
+        pk=pk
+    )
     user_has_borrowed = False
     
     if request.user.is_authenticated:
@@ -123,36 +143,44 @@ def book_delete(request, pk):
 
 @login_required
 def borrow_book(request, pk):
-    """Borrow a book"""
-    book = get_object_or_404(Book, pk=pk)
+    """Borrow a book with transaction safety"""
+    from django.db import transaction
     
-    # Check if user already borrowed this book
-    existing_borrow = BorrowRecord.objects.filter(
-        user=request.user,
-        book=book,
-        status='borrowed'
-    ).exists()
-    
-    if existing_borrow:
-        messages.warning(request, 'You have already borrowed this book!')
-        return redirect('book_detail', pk=pk)
-    
-    if not book.is_available():
-        messages.error(request, 'This book is not available for borrowing!')
-        return redirect('book_detail', pk=pk)
-    
-    # Create borrow record
-    due_date = timezone.now() + timedelta(days=14)  # 2 weeks loan
-    BorrowRecord.objects.create(
-        user=request.user,
-        book=book,
-        due_date=due_date,
-        status='borrowed'
-    )
-    
-    # Update available copies
-    book.available_copies -= 1
-    book.save()
+    # Use transaction and select_for_update to prevent race conditions
+    with transaction.atomic():
+        # Lock the book row for update
+        book = get_object_or_404(
+            Book.objects.select_for_update(),
+            pk=pk
+        )
+        
+        # Check if user already borrowed this book
+        existing_borrow = BorrowRecord.objects.filter(
+            user=request.user,
+            book=book,
+            status='borrowed'
+        ).exists()
+        
+        if existing_borrow:
+            messages.warning(request, 'You have already borrowed this book!')
+            return redirect('book_detail', pk=pk)
+        
+        if not book.is_available():
+            messages.error(request, 'This book is not available for borrowing!')
+            return redirect('book_detail', pk=pk)
+        
+        # Create borrow record
+        due_date = timezone.now() + timedelta(days=14)  # 2 weeks loan
+        BorrowRecord.objects.create(
+            user=request.user,
+            book=book,
+            due_date=due_date,
+            status='borrowed'
+        )
+        
+        # Update available copies
+        book.available_copies -= 1
+        book.save()
     
     messages.success(request, f'You have successfully borrowed "{book.title}"!')
     return redirect('my_borrowed_books')
@@ -165,30 +193,49 @@ def my_borrowed_books(request):
         user=request.user
     ).select_related('book', 'book__author').prefetch_related('book__categories')
     
+    # Pagination
+    paginator = Paginator(borrow_records, 10)  # Show 10 records per page
+    page = request.GET.get('page')
+    
+    try:
+        records_page = paginator.page(page)
+    except PageNotAnInteger:
+        records_page = paginator.page(1)
+    except EmptyPage:
+        records_page = paginator.page(paginator.num_pages)
+    
     context = {
-        'borrow_records': borrow_records,
+        'borrow_records': records_page,
     }
     return render(request, 'library/my_borrowed_books.html', context)
 
 
 @login_required
 def return_book(request, pk):
-    """Return a borrowed book"""
-    borrow_record = get_object_or_404(BorrowRecord, pk=pk, user=request.user)
+    """Return a borrowed book with transaction safety"""
+    from django.db import transaction
     
-    if borrow_record.status != 'borrowed':
-        messages.warning(request, 'This book has already been returned!')
-        return redirect('my_borrowed_books')
-    
-    # Update borrow record
-    borrow_record.return_date = timezone.now()
-    borrow_record.status = 'returned'
-    borrow_record.save()
-    
-    # Update available copies
-    book = borrow_record.book
-    book.available_copies += 1
-    book.save()
+    with transaction.atomic():
+        # Lock both records for update
+        borrow_record = get_object_or_404(
+            BorrowRecord.objects.select_related('book').select_for_update(),
+            pk=pk,
+            user=request.user
+        )
+        
+        if borrow_record.status != 'borrowed':
+            messages.warning(request, 'This book has already been returned!')
+            return redirect('my_borrowed_books')
+        
+        # Update borrow record
+        borrow_record.return_date = timezone.now()
+        borrow_record.status = 'returned'
+        borrow_record.save()
+        
+        # Update available copies with select_for_update
+        book = Book.objects.select_for_update().get(pk=borrow_record.book.pk)
+        book.available_copies += 1
+        book.save()
     
     messages.success(request, f'You have successfully returned "{book.title}"!')
     return redirect('my_borrowed_books')
@@ -277,8 +324,19 @@ def author_list(request):
     if query:
         authors = authors.filter(Q(name__icontains=query))
     
+    # Pagination
+    paginator = Paginator(authors, 20)  # Show 20 authors per page
+    page = request.GET.get('page')
+    
+    try:
+        authors_page = paginator.page(page)
+    except PageNotAnInteger:
+        authors_page = paginator.page(1)
+    except EmptyPage:
+        authors_page = paginator.page(paginator.num_pages)
+    
     context = {
-        'authors': authors,
+        'authors': authors_page,
         'query': query,
     }
     return render(request, 'library/author_list.html', context)

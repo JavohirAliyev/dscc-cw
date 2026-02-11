@@ -30,6 +30,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # For serving static files
+    'django.middleware.gzip.GZipMiddleware',  # Compress responses
+    'django.middleware.http.ConditionalGetMiddleware',  # Support for conditional GET requests
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -75,8 +77,10 @@ else:
         db_engine = 'dj_db_conn_pool.backends.postgresql'
         pool_options = {
             'POOL_OPTIONS': {
-                'POOL_SIZE': 10,
+                'POOL_SIZE': 20,  # Increased pool size for better concurrency
                 'MAX_OVERFLOW': 10,
+                'POOL_RECYCLE': 3600,  # Recycle connections after 1 hour
+                'POOL_PRE_PING': True,  # Check connection health before using
             }
         }
     except ImportError:
@@ -93,9 +97,14 @@ else:
             'HOST': config('DB_HOST', default='localhost'),
             'PORT': config('DB_PORT', default='5432'),
             'CONN_MAX_AGE': 600,  # Keep connections alive for 10 minutes
+            'CONN_HEALTH_CHECKS': True,  # Enable connection health checks
             'OPTIONS': {
                 'connect_timeout': 10,
-                'options': '-c statement_timeout=30000',  # 30 second query timeout
+                'options': '-c statement_timeout=30000 -c lock_timeout=10000',  # Query and lock timeouts
+                'keepalives': 1,
+                'keepalives_idle': 30,
+                'keepalives_interval': 10,
+                'keepalives_count': 5,
             },
             **pool_options
         }
@@ -143,6 +152,84 @@ LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
 LOGIN_URL = 'login'
 
+# Cache configuration
+REDIS_URL = config('REDIS_URL', default=None)
+
+if REDIS_URL:
+    # Use Redis for caching and sessions in production
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'PARSER_CLASS': 'redis.connection.HiredisParser',
+                'CONNECTION_POOL_KWARGS': {
+                    'max_connections': 50,
+                    'retry_on_timeout': True,
+                },
+                'SOCKET_CONNECT_TIMEOUT': 5,
+                'SOCKET_TIMEOUT': 5,
+            },
+            'KEY_PREFIX': 'library',
+            'TIMEOUT': 300,  # 5 minutes default
+        }
+    }
+    
+    # Use Redis for session storage
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+    SESSION_CACHE_ALIAS = 'default'
+else:
+    # Fallback to local memory cache for development
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+        }
+    }
+    
+# Session settings
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+SESSION_SAVE_EVERY_REQUEST = False  # Don't update session on every request
+
+# Template optimization
+if not DEBUG:
+    # Cache templates in production
+    TEMPLATES[0]['OPTIONS']['loaders'] = [
+        ('django.template.loaders.cached.Loader', [
+            'django.template.loaders.filesystem.Loader',
+            'django.template.loaders.app_directories.Loader',
+        ]),
+    ]
+    TEMPLATES[0]['APP_DIRS'] = False  # Must be False when using cached loader
+
+# Database query optimization
+# Log slow queries in production for monitoring
+if not DEBUG:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
+                'format': '{levelname} {asctime} {module} {message}',
+                'style': '{',
+            },
+        },
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'verbose',
+            },
+        },
+        'loggers': {
+            'django.db.backends': {
+                'handlers': ['console'],
+                'level': 'WARNING',  # Only log slow queries and errors
+                'propagate': False,
+            },
+        },
+    }
+
 # Security settings for production
 if not DEBUG:
     # Trust Azure Container Apps proxy headers for HTTPS
@@ -153,3 +240,8 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+    
+    # Additional security headers
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
