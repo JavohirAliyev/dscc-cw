@@ -87,28 +87,58 @@ else:
         # Fallback to standard PostgreSQL backend
         db_engine = 'django.db.backends.postgresql'
         pool_options = {}
+    # Ensure a PostgreSQL DB adapter is available before using the postgres backend.
+    # If none is installed and we're in DEBUG mode, fall back to a local SQLite file
+    # to allow local development without installing `psycopg`/`psycopg2`.
+    import importlib
+    db_adapter_available = False
+    try:
+        importlib.import_module('psycopg')
+        db_adapter_available = True
+    except ImportError:
+        try:
+            importlib.import_module('psycopg2')
+            db_adapter_available = True
+        except ImportError:
+            db_adapter_available = False
 
-    DATABASES = {
-        'default': {
-            'ENGINE': db_engine,
-            'NAME': config('DB_NAME', default='library_db'),
-            'USER': config('DB_USER', default='library_user'),
-            'PASSWORD': config('DB_PASSWORD', default='password'),
-            'HOST': config('DB_HOST', default='localhost'),
-            'PORT': config('DB_PORT', default='5432'),
-            'CONN_MAX_AGE': 600,  # Keep connections alive for 10 minutes
-            'CONN_HEALTH_CHECKS': True,  # Enable connection health checks
-            'OPTIONS': {
-                'connect_timeout': 10,
-                'options': '-c statement_timeout=30000 -c lock_timeout=10000',  # Query and lock timeouts
-                'keepalives': 1,
-                'keepalives_idle': 30,
-                'keepalives_interval': 10,
-                'keepalives_count': 5,
-            },
-            **pool_options
+    if not db_adapter_available:
+        if DEBUG:
+            # Use a local SQLite file for development when Postgres adapter missing
+            DATABASES = {
+                'default': {
+                    'ENGINE': 'django.db.backends.sqlite3',
+                    'NAME': BASE_DIR / 'db.sqlite3',
+                }
+            }
+        else:
+            from django.core.exceptions import ImproperlyConfigured
+
+            raise ImproperlyConfigured(
+                'PostgreSQL adapter (psycopg or psycopg2) is not installed.'
+            )
+    else:
+        DATABASES = {
+            'default': {
+                'ENGINE': db_engine,
+                'NAME': config('DB_NAME', default='library_db'),
+                'USER': config('DB_USER', default='library_user'),
+                'PASSWORD': config('DB_PASSWORD', default='password'),
+                'HOST': config('DB_HOST', default='localhost'),
+                'PORT': config('DB_PORT', default='5432'),
+                'CONN_MAX_AGE': 600,  # Keep connections alive for 10 minutes
+                'CONN_HEALTH_CHECKS': True,  # Enable connection health checks
+                'OPTIONS': {
+                    'connect_timeout': 10,
+                    'options': '-c statement_timeout=30000 -c lock_timeout=10000',  # Query and lock timeouts
+                    'keepalives': 1,
+                    'keepalives_idle': 30,
+                    'keepalives_interval': 10,
+                    'keepalives_count': 5,
+                },
+                **pool_options
+            }
         }
-    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
