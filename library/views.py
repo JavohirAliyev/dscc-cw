@@ -9,17 +9,28 @@ from django.contrib import messages
 from django.db.models import Q
 from django.utils import timezone
 from datetime import timedelta
+import logging
 from .models import Book, Author, Category, BorrowRecord, UserProfile
 from .forms import UserRegisterForm, BookForm, AuthorForm, CategoryForm, BorrowRecordForm, UserProfileForm
 
 
 def home(request):
     """Home page view - displays recent books and statistics"""
-    recent_books = Book.objects.select_related('author').prefetch_related('categories')[:6]
-    total_books = Book.objects.count()
-    total_authors = Author.objects.count()
-    total_categories = Category.objects.count()
-    
+    logger = logging.getLogger(__name__)
+    try:
+        recent_books = Book.objects.select_related('author').prefetch_related('categories')[:6]
+        total_books = Book.objects.count()
+        total_authors = Author.objects.count()
+        total_categories = Category.objects.count()
+    except Exception:
+        logger.exception('Failed to fetch home page data')
+        # Avoid raising 500 in production when DB is down; show a simple fallback
+        recent_books = []
+        total_books = 0
+        total_authors = 0
+        total_categories = 0
+        messages.error(request, 'The site is temporarily unavailable. Please try again later.')
+
     context = {
         'recent_books': recent_books,
         'total_books': total_books,
