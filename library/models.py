@@ -73,6 +73,12 @@ class Book(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['isbn']),
+            models.Index(fields=['title']),
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['author', '-created_at']),
+        ]
 
     def __str__(self):
         return f"{self.title} by {self.author.name}"
@@ -114,6 +120,12 @@ class BorrowRecord(models.Model):
 
     class Meta:
         ordering = ['-borrow_date']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['book', 'status']),
+            models.Index(fields=['-borrow_date']),
+            models.Index(fields=['status', 'due_date']),
+        ]
 
     def __str__(self):
         return f"{self.user.username} - {self.book.title} ({self.status})"

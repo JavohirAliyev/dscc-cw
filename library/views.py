@@ -15,7 +15,7 @@ from .forms import UserRegisterForm, BookForm, AuthorForm, CategoryForm, BorrowR
 
 def home(request):
     """Home page view - displays recent books and statistics"""
-    recent_books = Book.objects.all()[:6]
+    recent_books = Book.objects.select_related('author').prefetch_related('categories')[:6]
     total_books = Book.objects.count()
     total_authors = Author.objects.count()
     total_categories = Category.objects.count()
@@ -31,7 +31,7 @@ def home(request):
 
 def book_list(request):
     """Book list view with search and filter functionality"""
-    books = Book.objects.all()
+    books = Book.objects.select_related('author').prefetch_related('categories')
     query = request.GET.get('q')
     category = request.GET.get('category')
     
@@ -161,7 +161,9 @@ def borrow_book(request, pk):
 @login_required
 def my_borrowed_books(request):
     """View user's borrowed books"""
-    borrow_records = BorrowRecord.objects.filter(user=request.user)
+    borrow_records = BorrowRecord.objects.filter(
+        user=request.user
+    ).select_related('book', 'book__author').prefetch_related('book__categories')
     
     context = {
         'borrow_records': borrow_records,
@@ -269,7 +271,7 @@ def user_profile(request):
 
 def author_list(request):
     """Author list view"""
-    authors = Author.objects.all()
+    authors = Author.objects.prefetch_related('books').all()
     query = request.GET.get('q')
     
     if query:
@@ -284,8 +286,8 @@ def author_list(request):
 
 def author_detail(request, pk):
     """Author detail view"""
-    author = get_object_or_404(Author, pk=pk)
-    books = author.books.all()
+    author = get_object_or_404(Author.objects.prefetch_related('books'), pk=pk)
+    books = author.books.select_related('author').prefetch_related('categories')
     
     context = {
         'author': author,
