@@ -5,57 +5,57 @@
 {% block content %}
 <!-- Hero Section -->
 <div class="hero-section">
-    <div class="container">
+    <div class="container position-relative">
         <div class="row align-items-center">
             <div class="col-lg-8">
-                <h1 class="display-4 fw-bold mb-3">Welcome to Library Management System</h1>
-                <p class="lead mb-4">Discover, borrow, and manage your favorite books online. A modern digital library at your fingertips.</p>
+                <h1 class="display-4 fw-bold mb-3 animate-fade-in">Welcome to Library Management System</h1>
+                <p class="lead mb-4">Discover, borrow, and manage your favorite books online. Your digital library at your fingertips.</p>
                 <div>
-                    <a href="{% url 'book_list' %}" class="btn btn-light btn-lg me-2">
+                    <a href="{% url 'book_list' %}" class="btn btn-light btn-lg me-2 shadow">
                         <i class="bi bi-search"></i> Browse Books
                     </a>
                     {% if not user.is_authenticated %}
-                    <a href="{% url 'register' %}" class="btn btn-outline-light btn-lg">
-                        <i class="bi bi-person-plus"></i> Sign Up
+                    <a href="{% url 'register' %}" class="btn btn-outline-light btn-lg shadow">
+                        <i class="bi bi-person-plus-fill"></i> Join Now
                     </a>
                     {% endif %}
                 </div>
             </div>
-            <div class="col-lg-4">
-                <i class="bi bi-book-half" style="font-size: 10rem; opacity: 0.2;"></i>
+            <div class="col-lg-4 d-none d-lg-block">
+                <i class="bi bi-book-half" style="font-size: 12rem; opacity: 0.15; position: absolute; right: 50px;"></i>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Statistics -->
-<div class="container mb-5">
+<div class="container mb-5 animate-fade-in">
     <div class="row g-4">
         <div class="col-md-4">
             <div class="stat-card">
                 <div class="stat-icon">
-                    <i class="bi bi-book"></i>
+                    <i class="bi bi-book-fill"></i>
                 </div>
-                <h3 class="mt-3">{{ total_books }}</h3>
-                <p class="text-muted">Total Books</p>
+                <h2 class="fw-bold text-primary mb-2">{{ total_books }}</h2>
+                <p class="text-muted mb-0">Total Books</p>
             </div>
         </div>
         <div class="col-md-4">
             <div class="stat-card">
                 <div class="stat-icon">
-                    <i class="bi bi-people"></i>
+                    <i class="bi bi-people-fill"></i>
                 </div>
-                <h3 class="mt-3">{{ total_authors }}</h3>
-                <p class="text-muted">Authors</p>
+                <h2 class="fw-bold text-primary mb-2">{{ total_authors }}</h2>
+                <p class="text-muted mb-0">Authors</p>
             </div>
         </div>
         <div class="col-md-4">
             <div class="stat-card">
                 <div class="stat-icon">
-                    <i class="bi bi-tags"></i>
+                    <i class="bi bi-tags-fill"></i>
                 </div>
-                <h3 class="mt-3">{{ total_categories }}</h3>
-                <p class="text-muted">Categories</p>
+                <h2 class="fw-bold text-primary mb-2">{{ total_categories }}</h2>
+                <p class="text-muted mb-0">Categories</p>
             </div>
         </div>
     </div>
@@ -63,82 +63,100 @@
 
 <!-- Recent Books -->
 <div class="container mb-5">
-    <h2 class="mb-4">Recent Additions</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-stars"></i> Recent Additions</h2>
+        {% if recent_books %}
+        <a href="{% url 'book_list' %}" class="btn btn-outline-primary">
+            View All <i class="bi bi-arrow-right"></i>
+        </a>
+        {% endif %}
+    </div>
     <div class="row g-4">
         {% for book in recent_books %}
-        <div class="col-md-4">
-            <div class="card h-100">
+        <div class="col-md-4 col-lg-2">
+            <div class="card h-100 book-card-hover">
                 {% if book.cover_image %}
-                <img src="{{ book.cover_image.url }}" class="card-img-top book-cover" alt="{{ book.title }}">
+                <img src="{{ book.cover_image.url }}" class="card-img-top book-cover" alt="{{ book.title }}" loading="lazy">
                 {% else %}
-                <div class="card-img-top book-cover bg-secondary d-flex align-items-center justify-content-center">
-                    <i class="bi bi-book text-white" style="font-size: 4rem;"></i>
+                <div class="card-img-top book-cover bg-gradient d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <i class="bi bi-book text-white" style="font-size: 4rem; opacity: 0.8;"></i>
                 </div>
                 {% endif %}
-                <div class="card-body">
-                    <h5 class="card-title">{{ book.title }}</h5>
-                    <p class="card-text text-muted">
-                        <i class="bi bi-person"></i> {{ book.author.name }}
+                <div class="card-body d-flex flex-column">
+                    <h6 class="card-title mb-2" style="min-height: 3rem;">{{ book.title|truncatewords:5 }}</h6>
+                    <p class="card-text text-muted small mb-2">
+                        <i class="bi bi-person-fill"></i> {{ book.author.name|truncatewords:2 }}
                     </p>
-                    <p class="card-text">
-                        <small class="text-muted">
-                            {% if book.is_available %}
-                            <span class="badge bg-success">Available</span>
-                            {% else %}
-                            <span class="badge bg-danger">Not Available</span>
-                            {% endif %}
-                        </small>
+                    <p class="mb-3 mt-auto">
+                        {% if book.is_available %}
+                        <span class="badge bg-success small">
+                            <i class="bi bi-check-circle-fill"></i> Available
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger small">
+                            <i class="bi bi-x-circle-fill"></i> Unavailable
+                        </span>
+                        {% endif %}
                     </p>
-                    <a href="{% url 'book_detail' book.pk %}" class="btn btn-primary btn-sm">
-                        <i class="bi bi-eye"></i> View Details
+                    <a href="{% url 'book_detail' book.pk %}" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-eye-fill"></i> View
                     </a>
                 </div>
             </div>
         </div>
         {% empty %}
         <div class="col-12">
-            <p class="text-center text-muted">No books available yet.</p>
+            <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <h4 class="mt-3">No books available yet</h4>
+                <p class="text-muted">Check back soon for new additions!</p>
+            </div>
         </div>
         {% endfor %}
     </div>
-    
-    {% if recent_books %}
-    <div class="text-center mt-4">
-        <a href="{% url 'book_list' %}" class="btn btn-primary">View All Books</a>
-    </div>
-    {% endif %}
 </div>
 
 <!-- Features -->
 <div class="container mb-5">
-    <h2 class="mb-4 text-center">Features</h2>
+    <div class="text-center mb-5">
+        <h2 class="fw-bold">Why Choose Our Library?</h2>
+        <p class="text-muted">Everything you need for a seamless reading experience</p>
+    </div>
     <div class="row g-4">
         <div class="col-md-3">
-            <div class="text-center p-4">
-                <i class="bi bi-search" style="font-size: 3rem; color: var(--primary-color);"></i>
-                <h5 class="mt-3">Easy Search</h5>
+            <div class="text-center p-4 book-card-hover h-100 card border-0">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                    <i class="bi bi-search" style="font-size: 2.5rem; color: var(--primary-color);"></i>
+                </div>
+                <h5 class="mt-3 fw-bold">Easy Search</h5>
                 <p class="text-muted">Find books quickly by title, author, or ISBN</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="text-center p-4">
-                <i class="bi bi-bookmark-check" style="font-size: 3rem; color: var(--primary-color);"></i>
-                <h5 class="mt-3">Borrow Books</h5>
-                <p class="text-muted">Borrow books online with just a few clicks</p>
+            <div class="text-center p-4 book-card-hover h-100 card border-0">
+                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                    <i class="bi bi-bookmark-check-fill" style="font-size: 2.5rem; color: var(--success-color);"></i>
+                </div>
+                <h5 class="mt-3 fw-bold">Borrow Online</h5>
+                <p class="text-muted">Reserve books with just a few clicks</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="text-center p-4">
-                <i class="bi bi-clock-history" style="font-size: 3rem; color: var(--primary-color);"></i>
-                <h5 class="mt-3">Track History</h5>
-                <p class="text-muted">Keep track of your borrowing history</p>
+            <div class="text-center p-4 book-card-hover h-100 card border-0">
+                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                    <i class="bi bi-clock-history" style="font-size: 2.5rem; color: var(--secondary-color);"></i>
+                </div>
+                <h5 class="mt-3 fw-bold">Track History</h5>
+                <p class="text-muted">Monitor your borrowing activity</p>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="text-center p-4">
-                <i class="bi bi-person-circle" style="font-size: 3rem; color: var(--primary-color);"></i>
-                <h5 class="mt-3">User Profile</h5>
-                <p class="text-muted">Manage your account and preferences</p>
+            <div class="text-center p-4 book-card-hover h-100 card border-0">
+                <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                    <i class="bi bi-person-circle" style="font-size: 2.5rem; color: #17a2b8;"></i>
+                </div>
+                <h5 class="mt-3 fw-bold">Your Profile</h5>
+                <p class="text-muted">Personalized account management</p>
             </div>
         </div>
     </div>

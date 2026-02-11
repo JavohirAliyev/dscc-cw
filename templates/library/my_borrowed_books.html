@@ -3,70 +3,107 @@
 {% block title %}My Borrowed Books - Library Management System{% endblock %}
 
 {% block content %}
-<div class="container my-5">
-    <h2 class="mb-4"><i class="bi bi-bookmark-check"></i> My Borrowed Books</h2>
+<div class="container my-5 animate-fade-in">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <h2><i class="bi bi-bookmark-check-fill"></i> My Borrowed Books</h2>
+        <a href="{% url 'book_list' %}" class="btn btn-primary">
+            <i class="bi bi-search"></i> Browse Books
+        </a>
+    </div>
 
     {% if borrow_records %}
     <div class="row g-4">
         {% for record in borrow_records %}
-        <div class="col-md-6">
-            <div class="card {% if record.status == 'overdue' %}border-danger{% elif record.status == 'returned' %}border-success{% endif %}">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            {% if record.book.cover_image %}
-                            <img src="{{ record.book.cover_image.url }}" class="img-fluid rounded" alt="{{ record.book.title }}">
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 {% if record.status == 'overdue' %}border-danger{% elif record.status == 'returned' %}border-success{% else %}border-primary{% endif %}" style="border-width: 2px;">
+                <div class="card-header {% if record.status == 'overdue' %}bg-danger{% elif record.status == 'returned' %}bg-success{% else %}bg-primary{% endif %} text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-{% if record.status == 'overdue' %}exclamation-triangle{% elif record.status == 'returned' %}check-circle{% else %}clock{% endif %}-fill"></i>
+                        {% if record.status == 'borrowed' %}
+                            {% if record.is_overdue %}
+                            Overdue
                             {% else %}
-                            <div class="bg-secondary text-white d-flex align-items-center justify-content-center rounded" style="height: 150px;">
-                                <i class="bi bi-book" style="font-size: 3rem;"></i>
+                            Currently Borrowed
+                            {% endif %}
+                        {% elif record.status == 'returned' %}
+                        Returned
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-4">
+                            {% if record.book.cover_image %}
+                            <img src="{{ record.book.cover_image.url }}" class="img-fluid rounded shadow-sm" alt="{{ record.book.title }}">
+                            {% else %}
+                            <div class="bg-gradient text-white d-flex align-items-center justify-content-center rounded" style="height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                <i class="bi bi-book" style="font-size: 2.5rem; opacity: 0.8;"></i>
                             </div>
                             {% endif %}
                         </div>
-                        <div class="col-md-8">
-                            <h5 class="card-title">{{ record.book.title }}</h5>
-                            <p class="card-text text-muted">
-                                <i class="bi bi-person"></i> {{ record.book.author.name }}
+                        <div class="col-8">
+                            <h5 class="card-title mb-2">{{ record.book.title|truncatewords:5 }}</h5>
+                            <p class="card-text text-muted small mb-2">
+                                <i class="bi bi-person-fill"></i> {{ record.book.author.name }}
                             </p>
-                            
-                            <p class="card-text">
-                                <strong>Borrowed:</strong> {{ record.borrow_date|date:"M d, Y" }}<br>
-                                <strong>Due:</strong> {{ record.due_date|date:"M d, Y" }}<br>
-                                
-                                {% if record.return_date %}
-                                <strong>Returned:</strong> {{ record.return_date|date:"M d, Y" }}<br>
-                                {% endif %}
-                                
-                                <strong>Status:</strong>
-                                {% if record.status == 'borrowed' %}
-                                    {% if record.is_overdue %}
-                                    <span class="badge bg-danger">Overdue</span>
-                                    {% else %}
-                                    <span class="badge bg-primary">Borrowed</span>
-                                    {% endif %}
-                                {% elif record.status == 'returned' %}
-                                <span class="badge bg-success">Returned</span>
-                                {% endif %}
-                            </p>
-
-                            {% if record.status == 'borrowed' %}
-                            <form method="post" action="{% url 'return_book' record.pk %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success btn-sm">
-                                    <i class="bi bi-check-circle"></i> Return Book
-                                </button>
-                            </form>
-                            {% endif %}
                         </div>
                     </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div class="small">
+                        <p class="mb-2">
+                            <i class="bi bi-calendar-plus text-primary"></i> 
+                            <strong>Borrowed:</strong> {{ record.borrow_date|date:"M d, Y" }}
+                        </p>
+                        <p class="mb-2">
+                            <i class="bi bi-calendar-check {% if record.is_overdue %}text-danger{% else %}text-success{% endif %}"></i> 
+                            <strong>Due:</strong> {{ record.due_date|date:"M d, Y" }}
+                            {% if record.is_overdue and record.status == 'borrowed' %}
+                            <span class="badge bg-danger ms-1">OVERDUE</span>
+                            {% endif %}
+                        </p>
+                        
+                        {% if record.return_date %}
+                        <p class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i> 
+                            <strong>Returned:</strong> {{ record.return_date|date:"M d, Y" }}
+                        </p>
+                        {% endif %}
+                    </div>
+
+                    {% if record.status == 'borrowed' %}
+                    <div class="mt-3 d-grid gap-2">
+                        <form method="post" action="{% url 'return_book' record.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-check-circle-fill"></i> Return Book
+                            </button>
+                        </form>
+                        <a href="{% url 'book_detail' record.book.pk %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i> View Details
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="mt-3">
+                        <a href="{% url 'book_detail' record.book.pk %}" class="btn btn-outline-primary btn-sm w-100">
+                            <i class="bi bi-eye"></i> View Book Details
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> You haven't borrowed any books yet.
-        <a href="{% url 'book_list' %}" class="alert-link">Browse books</a> to get started!
+    <div class="empty-state py-5">
+        <i class="bi bi-inbox"></i>
+        <h4 class="mt-3">No borrowed books yet</h4>
+        <p class="text-muted">Start exploring our collection and borrow your first book!</p>
+        <a href="{% url 'book_list' %}" class="btn btn-primary mt-3">
+            <i class="bi bi-search"></i> Browse Books
+        </a>
     </div>
     {% endif %}
 </div>

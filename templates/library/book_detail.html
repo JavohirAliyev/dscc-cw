@@ -3,94 +3,147 @@
 {% block title %}{{ book.title }} - Library Management System{% endblock %}
 
 {% block content %}
-<div class="container my-5">
-    <div class="row">
+<div class="container my-5 animate-fade-in">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}"><i class="bi bi-house-fill"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'book_list' %}">Books</a></li>
+            <li class="breadcrumb-item active">{{ book.title|truncatewords:5 }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
         <!-- Book Cover -->
         <div class="col-md-4">
-            {% if book.cover_image %}
-            <img src="{{ book.cover_image.url }}" class="img-fluid rounded shadow" alt="{{ book.title }}">
-            {% else %}
-            <div class="bg-secondary text-white d-flex align-items-center justify-content-center rounded shadow" style="height: 500px;">
-                <i class="bi bi-book" style="font-size: 8rem;"></i>
+            <div class="card border-0 shadow">
+                {% if book.cover_image %}
+                <img src="{{ book.cover_image.url }}" class="img-fluid rounded" alt="{{ book.title }}" style="width: 100%; height: auto;">
+                {% else %}
+                <div class="bg-gradient text-white d-flex align-items-center justify-content-center rounded" style="height: 500px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <i class="bi bi-book" style="font-size: 10rem; opacity: 0.8;"></i>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
+            
+            <!-- Quick Stats Card -->
+            <div class="card mt-3 border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted mb-3"><i class="bi bi-info-circle-fill"></i> Quick Info</h6>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="bi bi-upc text-primary"></i>
+                            <small><strong>ISBN:</strong> {{ book.isbn }}</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-file-earmark-text text-primary"></i>
+                            <small><strong>Pages:</strong> {{ book.pages }}</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-calendar-event text-primary"></i>
+                            <small><strong>Published:</strong> {{ book.publication_date|date:"M d, Y" }}</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-stack text-primary"></i>
+                            <small><strong>Total Copies:</strong> {{ book.total_copies }}</small>
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle text-primary"></i>
+                            <small><strong>Available:</strong> 
+                                {% if book.is_available %}
+                                <span class="badge bg-success">{{ book.available_copies }}</span>
+                                {% else %}
+                                <span class="badge bg-danger">0</span>
+                                {% endif %}
+                            </small>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
         <!-- Book Details -->
         <div class="col-md-8">
-            <h1 class="mb-3">{{ book.title }}</h1>
-            
-            <p class="lead">
-                <i class="bi bi-person-fill"></i> 
-                <a href="{% url 'author_detail' book.author.pk %}">{{ book.author.name }}</a>
-            </p>
-
             <div class="mb-4">
-                {% for category in book.categories.all %}
-                <span class="badge bg-info me-1">{{ category.name }}</span>
-                {% endfor %}
+                <h1 class="display-5 fw-bold mb-3">{{ book.title }}</h1>
+                
+                <p class="lead mb-3">
+                    <i class="bi bi-person-fill text-primary"></i> 
+                    by <a href="{% url 'author_detail' book.author.pk %}" class="text-decoration-none fw-semibold">{{ book.author.name }}</a>
+                </p>
+
+                {% if book.categories.all %}
+                <div class="mb-4">
+                    {% for category in book.categories.all %}
+                    <span class="badge bg-info text-dark me-2 px-3 py-2">
+                        <i class="bi bi-tag-fill"></i> {{ category.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>ISBN:</strong> {{ book.isbn }}</p>
-                            <p><strong>Pages:</strong> {{ book.pages }}</p>
-                            <p><strong>Publication Date:</strong> {{ book.publication_date }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Total Copies:</strong> {{ book.total_copies }}</p>
-                            <p>
-                                <strong>Available:</strong> 
-                                {% if book.is_available %}
-                                <span class="badge bg-success">{{ book.available_copies }} copies</span>
-                                {% else %}
-                                <span class="badge bg-danger">Not Available</span>
-                                {% endif %}
-                            </p>
-                        </div>
-                    </div>
+            <!-- Availability Status -->
+            <div class="alert {% if book.is_available %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center" role="alert">
+                <i class="bi bi-{% if book.is_available %}check-circle-fill{% else %}x-circle-fill{% endif %} me-2 fs-4"></i>
+                <div>
+                    {% if book.is_available %}
+                    <strong>Available Now!</strong> This book has {{ book.available_copies }} cop{{ book.available_copies|pluralize:"y,ies" }} available for borrowing.
+                    {% else %}
+                    <strong>Currently Unavailable.</strong> All copies are currently borrowed. Please check back later.
+                    {% endif %}
                 </div>
             </div>
 
-            <div class="mb-4">
-                <h4>Description</h4>
-                <p>{{ book.description|default:"No description available." }}</p>
+            <!-- Description -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="mb-3"><i class="bi bi-file-text"></i> Description</h4>
+                    <p class="text-muted" style="text-align: justify; line-height: 1.8;">
+                        {{ book.description|default:"No description available for this book yet. Check back later for more details." }}
+                    </p>
+                </div>
             </div>
 
-            <!-- Actions -->
-            <div class="d-flex gap-2 flex-wrap">
-                {% if user.is_authenticated %}
-                    {% if not user_has_borrowed and book.is_available %}
-                    <a href="{% url 'borrow_book' book.pk %}" class="btn btn-success">
-                        <i class="bi bi-bookmark-plus"></i> Borrow This Book
-                    </a>
-                    {% elif user_has_borrowed %}
-                    <button class="btn btn-secondary" disabled>
-                        <i class="bi bi-check-circle"></i> Already Borrowed
-                    </button>
-                    {% else %}
-                    <button class="btn btn-secondary" disabled>
-                        <i class="bi bi-x-circle"></i> Not Available
-                    </button>
-                    {% endif %}
+            <!-- Action Buttons -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="mb-3"><i class="bi bi-gear-fill"></i> Actions</h5>
+                    <div class="d-flex gap-2 flex-wrap">
+                        {% if user.is_authenticated %}
+                            {% if not user_has_borrowed and book.is_available %}
+                            <a href="{% url 'borrow_book' book.pk %}" class="btn btn-success">
+                                <i class="bi bi-bookmark-plus-fill"></i> Borrow This Book
+                            </a>
+                            {% elif user_has_borrowed %}
+                            <button class="btn btn-secondary" disabled>
+                                <i class="bi bi-check-circle-fill"></i> Already Borrowed
+                            </button>
+                            {% else %}
+                            <button class="btn btn-secondary" disabled>
+                                <i class="bi bi-x-circle-fill"></i> Not Available
+                            </button>
+                            {% endif %}
 
-                    <a href="{% url 'book_update' book.pk %}" class="btn btn-warning">
-                        <i class="bi bi-pencil"></i> Edit
-                    </a>
-                    <a href="{% url 'book_delete' book.pk %}" class="btn btn-danger">
-                        <i class="bi bi-trash"></i> Delete
-                    </a>
-                {% else %}
-                    <a href="{% url 'login' %}" class="btn btn-primary">
-                        <i class="bi bi-box-arrow-in-right"></i> Login to Borrow
-                    </a>
-                {% endif %}
-                
-                <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to List
-                </a>
+                            {% if user.is_staff %}
+                            <a href="{% url 'book_update' book.pk %}" class="btn btn-warning">
+                                <i class="bi bi-pencil-square"></i> Edit Book
+                            </a>
+                            <a href="{% url 'book_delete' book.pk %}" class="btn btn-danger">
+                                <i class="bi bi-trash-fill"></i> Delete
+                            </a>
+                            {% endif %}
+                        {% else %}
+                            <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary btn-lg">
+                                <i class="bi bi-box-arrow-in-right"></i> Login to Borrow
+                            </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'book_list' %}" class="btn btn-outline-secondary ms-auto">
+                            <i class="bi bi-arrow-left-circle"></i> Back to Books
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
